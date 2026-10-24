@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MODBLOCK – Minecraft-Modsuche</title>
+<style>
+:root{color-scheme:dark;--bg:#0c1110;--panel:#151d1a;--panel2:#1c2722;--line:#2b3b33;--text:#edf7ef;--muted:#a4b5aa;--green:#63e69a;--green2:#2bbd70}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#17251d 0,#0c1110 55%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px clamp(16px,4vw,56px);border-bottom:1px solid #233128;background:#0c1110d9;position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}
+.logo{font-weight:900;letter-spacing:.08em;font-size:1.25rem}.logo span{color:var(--green)}.tag{color:var(--muted);font-size:.85rem}
+main{width:min(1200px,92vw);margin:0 auto;padding:28px 0 60px}
+.hero{min-height:66vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;transition:.25s}
+.hero h1{font-size:clamp(2.2rem,6vw,4.5rem);line-height:1.04;margin:0 0 16px;letter-spacing:-.04em}.hero h1 em{color:var(--green);font-style:normal}.hero p{color:var(--muted);margin:0 0 30px}
+.search{display:flex;gap:10px;width:min(850px,100%);padding:8px;border:1px solid #3b5546;border-radius:18px;background:#111a15;box-shadow:0 18px 65px #0005}
+.search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--text);font:inherit;padding:12px 14px}.btn{border:0;border-radius:12px;background:var(--green);color:#072012;font-weight:800;padding:12px 19px;cursor:pointer;font:inherit;font-weight:800}.btn:hover{background:#8af4b2}.btn.secondary{background:#25352b;color:var(--text);border:1px solid #3c5143}.btn:disabled{opacity:.5;cursor:wait}
+.quick{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:20px}.chip{background:#17231b;color:#c6d9cb;border:1px solid #2d4234;border-radius:999px;padding:7px 12px;cursor:pointer}.chip:hover{border-color:var(--green);color:var(--green)}
+.results{display:none}.results.active{display:block}.hero.compact{min-height:0;align-items:stretch;text-align:left;margin-bottom:25px}.hero.compact h1,.hero.compact p,.hero.compact .quick{display:none}.hero.compact .search{width:100%;box-shadow:none}
+.toolbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;background:var(--panel);border:1px solid var(--line);padding:16px;border-radius:18px;margin:18px 0 24px}
+label{font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:6px}select{background:#0f1712;border:1px solid #35483b;color:var(--text);border-radius:9px;padding:10px;font:inherit;min-width:0}
+.meta{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:12px 0;color:var(--muted);font-size:.9rem}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.card{border:1px solid var(--line);background:linear-gradient(145deg,#18221c,#111713);border-radius:16px;padding:17px;display:flex;flex-direction:column;min-height:260px;transition:transform .15s,border-color .15s}.card:hover{transform:translateY(-2px);border-color:#52745e}
+.cardtop{display:flex;align-items:center;gap:12px;margin-bottom:12px}.icon{width:52px;height:52px;flex-shrink:0;border-radius:12px;object-fit:cover;background:#25352b}.iconfallback{display:grid;place-items:center;font-size:1.5rem}.card h3{font-size:1.07rem;line-height:1.25;margin:0;overflow-wrap:anywhere}.downloads{font-size:.76rem;color:var(--muted);margin-top:4px}.desc{color:#bdcbbf;font-size:.9rem;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 16px}.cardfoot{margin-top:auto;display:flex;gap:8px}.cardfoot a{flex:1;text-decoration:none;text-align:center;border-radius:10px;padding:9px 8px;font-size:.88rem;font-weight:750}.open{background:#24362a;color:#e6f7e9;border:1px solid #3a5542}.download{background:var(--green);color:#072012}
+.empty{padding:45px 20px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:16px}.pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:25px}.status{color:var(--muted);font-size:.9rem;min-height:1.4em;margin:10px 2px}.notice{font-size:.82rem;color:var(--muted);margin-top:18px}.spinner{display:inline-block;width:15px;height:15px;border:2px solid #365140;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:7px}@keyframes spin{to{transform:rotate(360deg)}}
+footer{border-top:1px solid #233128;padding:24px;text-align:center;color:var(--muted);font-size:.82rem}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){header{padding:15px}.tag{display:none}main{width:92vw;padding-top:20px}.hero{min-height:58vh}.search{gap:4px}.search input{padding:10px 8px}.search .btn{padding:10px 12px}.grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr 1fr;padding:12px;gap:10px}.card{min-height:230px}}
+</style>
+</head>
+<body>
+<header><div class="logo">MOD<span>BLOCK</span></div><div class="tag">Minecraft-Mods entdecken</div></header>
+<main>
+<section class="hero" id="hero">
+<h1>Dein nächstes <em>Minecraft</em>-Modpack beginnt hier.</h1>
+<p>Durchsuche Mods direkt über Modrinth – mit Versionen, Loadern und Seitenfiltern.</p>
+<form class="search" id="searchForm"><input id="query" placeholder="Mods suchen … z. B. Sodium, Create, minimap" autocomplete="off"><button class="btn" type="submit">Suchen →</button></form>
+<div class="quick"><button class="chip" data-q="performance">Performance</button><button class="chip" data-q="technology">Technik</button><button class="chip" data-q="adventure">Abenteuer</button><button class="chip" data-q="utility">Utility</button><button class="chip" data-q="decoration">Dekoration</button><button class="chip" data-q="worldgen">Worldgen</button></div>
+</section>
+<section class="results" id="results">
+<div class="toolbar">
+<label>Minecraft-Version<select id="version"><option value="">Alle Versionen</option><option>1.21.10</option><option>1.21.8</option><option>1.21.5</option><option>1.21.4</option><option>1.21.1</option><option>1.20.1</option><option>1.19.2</option><option>1.18.2</option><option>1.16.5</option></select></label>
+<label>Mod-Loader<select id="loader"><option value="">Alle Loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label>
+<label>Seite<select id="environment"><option value="">Client & Server / beliebig</option><option value="client_only">Nur Client</option><option value="server_only">Nur Server</option><option value="client_and_server">Client & Server</option></select></label>
+<label>Sortierung<select id="sort"><option value="relevance">Relevanz</option><option value="downloads">Downloads</option><option value="follows">Beliebtheit</option><option value="newest">Neueste</option><option value="updated">Zuletzt aktualisiert</option></select></label>
+</div>
+<div class="meta"><span id="heading">Suchergebnisse</span><span id="count"></span></div>
+<div id="status" class="status" role="status"></div>
+<div id="grid" class="grid"></div>
+<div class="pagination"><button id="prev" class="btn secondary">← Zurück</button><span id="pageLabel">Seite 1</span><button id="next" class="btn secondary">Weiter →</button></div>
+<p class="notice">Die Moddaten kommen live von Modrinth. Der Download öffnet die passende Mod-Datei; lege die .jar-Datei anschließend in deinen Minecraft-Ordner <code>mods</code>. Prüfe vor dem Start, ob Loader und Spielversion passen.</p>
+</section>
+</main>
+<footer>MODBLOCK · Unabhängige Modsuche · Datenquelle: Modrinth</footer>
+<script>
+const API='https://api.modrinth.com/v2';
+const $=id=>document.getElementById(id);
+let page=0, activeQuery='', total=0, busy=false, pageHits=0, totalKnown=true;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const facets=()=>{const f=[['project_type:mod']];if($('version').value)f.push([`versions:${$('version').value}`]);if($('loader').value)f.push([`categories:${$('loader').value}`]);if($('environment').value)f.push([`client_side:${$('environment').value}`]);return JSON.stringify(f)};
+function fmt(n){if(!Number.isFinite(n))return '—';return new Intl.NumberFormat('de-DE',{notation:n>=1000?'compact':'standard',maximumFractionDigits:1}).format(n)}
+function hasNextPage(){return totalKnown ? (page+1)*12<total : pageHits===12}
+function setBusy(v){busy=v;$('next').disabled=v||!hasNextPage();$('prev').disabled=v||page===0;$('status').innerHTML=v?'<span class="spinner"></span>Suche Modrinth …':''}
+function runSearch(reset=true){if(reset)page=0;activeQuery=$('query').value.trim();$('hero').classList.add('compact');$('results').classList.add('active');$('heading').textContent=activeQuery?`Ergebnisse für „${activeQuery}“`:'Beliebte Mods';fetchResults()}
+async function fetchResults(){if(busy)return;setBusy(true);$('grid').innerHTML='';$('count').textContent='';$('pageLabel').textContent=`Seite ${page+1}`;
+try{const params=new URLSearchParams({query:activeQuery,limit:'12',offset:String(page*12),index:$('sort').value,facets:facets()});const r=await fetch(`${API}/search?${params}`);if(!r.ok)throw new Error(`Modrinth antwortet mit HTTP ${r.status}`);const data=await r.json();const hits=Array.isArray(data.hits)?data.hits:[];pageHits=hits.length;
+totalKnown=Number.isFinite(data.total)&&data.total>=hits.length&&(data.total>0||hits.length===0);
+total=totalKnown?data.total:0;
+$('count').textContent=totalKnown?`${fmt(total)} Mods`:`mind. ${fmt(page*12+hits.length)} Mods`;
+if(!hits.length){total=Number.isFinite(data.total)?data.total:0;totalKnown=true;$('count').textContent=`${fmt(total)} Mods`;$('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Keine Mods gefunden. Ändere den Suchbegriff oder entferne einen Filter.</div>';return}
+$('grid').innerHTML=hits.map(m=>`<article class="card"><div class="cardtop">${m.icon_url?`<img class="icon" src="${esc(m.icon_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`:'<div class="icon iconfallback">▦</div>'}<div><h3>${esc(m.title)}</h3><div class="downloads">${fmt(m.downloads)} Downloads · ${fmt(m.followers)} Favoriten</div></div></div><p class="desc">${esc(m.description||'Keine Beschreibung verfügbar.')}</p><div class="cardfoot"><a class="open" href="${esc(m.project_id?`https://modrinth.com/mod/${encodeURIComponent(m.slug)}`:'#')}" target="_blank" rel="noopener">Details ↗</a><a class="download" href="#" data-slug="${esc(m.slug)}" data-project="${esc(m.project_id)}">Download ↓</a></div></article>`).join('');
+$('grid').querySelectorAll('[data-project]').forEach(a=>a.addEventListener('click',downloadMod));
+}catch(e){$('grid').innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>Die Suche konnte nicht geladen werden.</strong><br>${esc(e.message)}<br><br>Prüfe deine Internetverbindung oder versuche es später erneut.</div>`;total=0;pageHits=0;totalKnown=true}
+finally{setBusy(false);$('prev').disabled=page===0;$('next').disabled=!hasNextPage()}}
+async function downloadMod(ev){ev.preventDefault();const a=ev.currentTarget;if(a.dataset.loading)return;a.dataset.loading='1';const old=a.textContent;a.textContent='Suche Datei…';try{const p=new URLSearchParams();if($('loader').value)p.set('loaders',JSON.stringify([$ ('loader').value]));if($('version').value)p.set('game_versions',JSON.stringify([$ ('version').value]));p.set('include_changelog','false');const r=await fetch(`${API}/project/${encodeURIComponent(a.dataset.project)}/version?${p}`);if(!r.ok)throw new Error('Versionen konnten nicht geladen werden.');const versions=await r.json();const ver=versions.find(v=>v.files&&v.files.length);if(!ver)throw new Error('Keine passende veröffentlichte Datei für diese Filter gefunden.');const file=ver.files.find(f=>f.primary)||ver.files[0];window.open(file.url,'_blank','noopener');a.textContent='Download geöffnet';setTimeout(()=>a.textContent=old,1800)}catch(e){alert(e.message);a.textContent=old}finally{delete a.dataset.loading}}
+$('searchForm').addEventListener('submit',e=>{e.preventDefault();runSearch()});
+document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{$('query').value=b.dataset.q;runSearch()}));
+['version','loader','environment','sort'].forEach(id=>$(id).addEventListener('change',()=>{if($('results').classList.contains('active'))runSearch()}));
+$('prev').addEventListener('click',()=>{if(page>0){page--;fetchResults()}});
+$('next').addEventListener('click',()=>{if(!busy&&hasNextPage()){page++;fetchResults()}});
+$('query').value='';runSearch();
+</script>
+</body>
+</html>
