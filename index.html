@@ -38,7 +38,7 @@ footer{border-top:1px solid #233128;padding:24px;text-align:center;color:var(--m
 </section>
 <section class="results" id="results">
 <div class="toolbar">
-<label>Minecraft-Version<select id="version"><option value="">Alle Versionen</option><option>26.3</option><option>1.21.10</option><option>1.21.8</option><option>1.21.5</option><option>1.21.4</option><option>1.21.1</option><option>1.20.1</option><option>1.19.2</option><option>1.18.2</option><option>1.16.5</option></select></label>
+<label>Minecraft-Version<select id="version"><option value="">Alle Versionen</option></select></label>
 <label>Mod-Loader<select id="loader"><option value="">Alle Loader</option><option value="fabric">Fabric</option><option value="forge">Forge</option><option value="neoforge">NeoForge</option><option value="quilt">Quilt</option></select></label>
 <label>Seite<select id="environment"><option value="">Client & Server / beliebig</option><option value="client_only">Nur Client</option><option value="server_only">Nur Server</option><option value="client_and_server">Client & Server</option></select></label>
 <label>Sortierung<select id="sort"><option value="relevance">Relevanz</option><option value="downloads">Downloads</option><option value="follows">Beliebtheit</option><option value="newest">Neueste</option><option value="updated">Zuletzt aktualisiert</option></select></label>
@@ -53,6 +53,27 @@ footer{border-top:1px solid #233128;padding:24px;text-align:center;color:var(--m
 <footer>MODBLOCK · Unabhängige Modsuche · Datenquelle: Modrinth</footer>
 <script>
 const API='https://api.modrinth.com/v2';
+// Versionsliste live von Modrinth laden, damit neue Releases automatisch erscheinen.
+async function loadMinecraftVersions(){
+ const select=$('version');
+ try{
+  const response=await fetch(`${API}/tag/game_version`);
+  if(!response.ok)throw new Error('Minecraft-Versionen konnten nicht geladen werden');
+  const versions=await response.json();
+  const compareVersions=(a,b)=>{const aa=String(a).match(/\\d+/g)?.map(Number)||[];const bb=String(b).match(/\\d+/g)?.map(Number)||[];for(let i=0;i<Math.max(aa.length,bb.length);i++){const diff=(aa[i]||0)-(bb[i]||0);if(diff)return diff;}return 0;};
+  const minimum=[1,20];
+  const eligible=versions.filter(v=>v.version_type==='release'&&compareVersions(v.version,'1.20')>=0);
+  eligible.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const current=select.value;
+  select.replaceChildren(new Option('Alle Versionen',''));
+  for(const v of eligible)select.add(new Option(v.version,v.version));
+  if([...select.options].some(o=>o.value===current))select.value=current;
+ }catch(error){
+  // Fallback: Suche bleibt benutzbar, falls Modrinth vorübergehend nicht erreichbar ist.
+  if(select.options.length===1){for(const version of ['26.3','1.21.10','1.21.8','1.21.5','1.21.4','1.21.1','1.20.1'])select.add(new Option(version,version));}
+  console.warn('Dynamische Minecraft-Versionsliste:',error);
+ }
+}
 const $=id=>document.getElementById(id);
 let page=0, activeQuery='', total=0, busy=false, pageHits=0, totalKnown=true;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -77,7 +98,7 @@ document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>
 ['version','loader','environment','sort'].forEach(id=>$(id).addEventListener('change',()=>{if($('results').classList.contains('active'))runSearch()}));
 $('prev').addEventListener('click',()=>{if(page>0){page--;fetchResults()}});
 $('next').addEventListener('click',()=>{if(!busy&&hasNextPage()){page++;fetchResults()}});
-$('query').value='';runSearch();
+$('query').value='';loadMinecraftVersions();runSearch();
 </script>
 </body>
 </html>
