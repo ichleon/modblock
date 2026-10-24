@@ -81,7 +81,58 @@ const facets=()=>{const f=[['project_type:mod']];if($('version').value)f.push([`
 function fmt(n){if(!Number.isFinite(n))return '—';return new Intl.NumberFormat('de-DE',{notation:n>=1000?'compact':'standard',maximumFractionDigits:1}).format(n)}
 function hasNextPage(){return totalKnown ? (page+1)*12<total : pageHits===12}
 function setBusy(v){busy=v;$('next').disabled=v||!hasNextPage();$('prev').disabled=v||page===0;$('status').innerHTML=v?'<span class="spinner"></span>Suche Modrinth …':''}
-function runSearch(reset=true){if(reset)page=0;activeQuery=$('query').value.trim();$('hero').classList.add('compact');$('results').classList.add('active');$('heading').textContent=activeQuery?`Ergebnisse für „${activeQuery}“`:'Beliebte Mods';fetchResults()}
+function runSearch(reset=true){
+ if(reset)page=0;
+ activeQuery=$('query').value.trim();
+ $('hero').classList.add('compact');
+ $('results').classList.add('active');
+ if(activeQuery.toLowerCase()==='local'){
+  $('heading').textContent='Lokale Mods';
+  loadLocalMods();
+  return;
+ }
+ $('heading').textContent=activeQuery?`Ergebnisse für „${activeQuery}“`:'Beliebte Mods';
+ fetchResults();
+}
+async function loadLocalMods(){
+ $('grid').innerHTML='';
+ $('count').textContent='';
+ $('pageLabel').textContent='Local';
+ $('prev').disabled=true;$('next').disabled=true;
+ $('status').innerHTML='<span class="spinner"></span>Lade lokale Modliste …';
+ try{
+  const api='https://api.github.com/repos/ichleon/Local-mods/contents';
+  const rootResponse=await fetch(api+'?ref=main');
+  if(!rootResponse.ok)throw new Error('GitHub-Repository konnte nicht gelesen werden (HTTP '+rootResponse.status+').');
+  const root=await rootResponse.json();
+  let entries=Array.isArray(root)?root:[];
+  // Unterstützt .jar-Dateien im Repository-Stamm sowie im optionalen Ordner local-mods/.
+  const folder=entries.find(item=>item.type==='dir'&&item.name.toLowerCase()==='local-mods');
+  if(folder){
+   const folderResponse=await fetch(api+'/local-mods?ref=main');
+   if(folderResponse.ok){
+    const nested=await folderResponse.json();
+    if(Array.isArray(nested))entries=entries.concat(nested);
+   }
+  }
+  const mods=entries.filter(item=>item.type==='file'&&item.name.toLowerCase().endsWith('.jar')&&item.download_url);
+  const unique=[...new Map(mods.map(m=>[m.path||m.name,m])).values()];
+  $('status').textContent='';
+  $('count').textContent=unique.length+' lokale Mods';
+  if(!unique.length){
+   $('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Keine .jar-Dateien gefunden. Lege Moddateien in die Repository oder in den Ordner local-mods/ auf dem Branch main.</div>';
+   return;
+  }
+  $('grid').innerHTML=unique.map(m=>{
+   const name=m.name.replace(/\\.jar$/i,'');
+   const size=Number.isFinite(m.size)?fmt(m.size)+' Bytes':'GitHub-Datei';
+   return '<article class="card"><div class="cardtop"><div class="icon iconfallback">▦</div><div><h3>'+esc(name)+'</h3><div class="downloads">Lokale Mod · '+esc(size)+'</div></div></div><p class="desc">Aus der öffentlichen MODBLOCK-Modsammlung. Die Datei wird direkt aus GitHub heruntergeladen.</p><div class="cardfoot"><a class="open" href="'+esc(m.html_url||'#')+'" target="_blank" rel="noopener">Details ↗</a><a class="download" href="'+esc(m.download_url)+'" download="'+esc(m.name)+'">Download ↓</a></div></article>';
+  }).join('');
+ }catch(error){
+  $('status').textContent='';
+  $('grid').innerHTML='<div class="empty" style="grid-column:1/-1"><strong>Lokale Mods konnten nicht geladen werden.</strong><br>'+esc(error.message)+'<br><br>Prüfe, ob die Repository öffentlich ist und der Branch main existiert.</div>';
+ }
+}
 async function fetchResults(){if(busy)return;setBusy(true);$('grid').innerHTML='';$('count').textContent='';$('pageLabel').textContent=`Seite ${page+1}`;
 try{const params=new URLSearchParams({query:activeQuery,limit:'12',offset:String(page*12),index:$('sort').value,facets:facets()});const r=await fetch(`${API}/search?${params}`);if(!r.ok)throw new Error(`Modrinth antwortet mit HTTP ${r.status}`);const data=await r.json();const hits=Array.isArray(data.hits)?data.hits:[];pageHits=hits.length;
 totalKnown=Number.isFinite(data.total)&&data.total>=hits.length&&(data.total>0||hits.length===0);
@@ -95,7 +146,7 @@ finally{setBusy(false);$('prev').disabled=page===0;$('next').disabled=!hasNextPa
 async function downloadMod(ev){ev.preventDefault();const a=ev.currentTarget;if(a.dataset.loading)return;a.dataset.loading='1';const old=a.textContent;a.textContent='Suche Datei…';try{const p=new URLSearchParams();if($('loader').value)p.set('loaders',JSON.stringify([$ ('loader').value]));if($('version').value)p.set('game_versions',JSON.stringify([$ ('version').value]));p.set('include_changelog','false');const r=await fetch(`${API}/project/${encodeURIComponent(a.dataset.project)}/version?${p}`);if(!r.ok)throw new Error('Versionen konnten nicht geladen werden.');const versions=await r.json();const ver=versions.find(v=>v.files&&v.files.length);if(!ver)throw new Error('Keine passende veröffentlichte Datei für diese Filter gefunden.');const file=ver.files.find(f=>f.primary)||ver.files[0];window.open(file.url,'_blank','noopener');a.textContent='Download geöffnet';setTimeout(()=>a.textContent=old,1800)}catch(e){alert(e.message);a.textContent=old}finally{delete a.dataset.loading}}
 $('searchForm').addEventListener('submit',e=>{e.preventDefault();runSearch()});
 document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{$('query').value=b.dataset.q;runSearch()}));
-['version','loader','environment','sort'].forEach(id=>$(id).addEventListener('change',()=>{if($('results').classList.contains('active'))runSearch()}));
+['version','loader','environment','sort'].forEach(id=>$(id).addEventListener('change',()=>{if($('results').classList.contains('active')&&$('query').value.trim().toLowerCase()!=='local')runSearch()}));
 $('prev').addEventListener('click',()=>{if(page>0){page--;fetchResults()}});
 $('next').addEventListener('click',()=>{if(!busy&&hasNextPage()){page++;fetchResults()}});
 $('query').value='';loadMinecraftVersions();runSearch();
