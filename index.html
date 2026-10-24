@@ -77,7 +77,7 @@ async function loadMinecraftVersions(){
 const $=id=>document.getElementById(id);
 let page=0, activeQuery='', total=0, busy=false, pageHits=0, totalKnown=true;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const facets=()=>{const f=[['project_type:mod']];if($('version').value)f.push([`versions:${$('version').value}`]);if($('loader').value)f.push([`categories:${$('loader').value}`]);if($('environment').value)f.push([`client_side:${$('environment').value}`]);return JSON.stringify(f)};
+const facets=()=>{const f=[['project_type:mod']];if($('version').value)f.push([`versions:${$('version').value}`]);if($('loader').value)f.push([`categories:${$('loader').value}`]);if($('environment').value){const env=$('environment').value;if(env==='client_only')f.push(['client_side:required']);else if(env==='server_only')f.push(['server_side:required']);else if(env==='client_and_server'){f.push(['client_side:required']);f.push(['server_side:required']);}}return JSON.stringify(f)};
 function fmt(n){if(!Number.isFinite(n))return '—';return new Intl.NumberFormat('de-DE',{notation:n>=1000?'compact':'standard',maximumFractionDigits:1}).format(n)}
 function hasNextPage(){return totalKnown ? (page+1)*12<total : pageHits===12}
 function setBusy(v){busy=v;$('next').disabled=v||!hasNextPage();$('prev').disabled=v||page===0;$('status').innerHTML=v?'<span class="spinner"></span>Suche Modrinth …':''}
