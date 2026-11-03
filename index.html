@@ -209,17 +209,21 @@ async function loadLocalMods(path=''){
   $('count').textContent=folders.length+' Ordner · '+mods.length+' lokale Mods';
   const folderCards=folders.map(folder=>{
    const folderPath=folder.path||(path?path+'/':'')+folder.name;
-   return '<button class="card folder-card" type="button" data-folder="'+esc(folderPath)+'" aria-label="Ordner '+esc(folder.name)+' öffnen"><div class="cardtop"><div class="icon folder-icon" aria-hidden="true">📁</div><div><h3>'+esc(folder.name)+'</h3><div class="downloads">Ordner · öffnen zum Anzeigen</div></div></div><p class="desc">Enthält weitere Ordner oder Mod-Dateien.</p><div class="cardfoot"><span class="folder-open">Ordner öffnen →</span></div></button>';
+   return '<article class="card folder-card" role="button" tabindex="0" data-folder="'+esc(folderPath)+'" aria-label="Ordner '+esc(folder.name)+' öffnen"><div class="cardtop"><div class="icon folder-icon" aria-hidden="true">📁</div><div><h3>'+esc(folder.name)+'</h3><div class="downloads">Ordner · öffnen zum Anzeigen</div></div></div><p class="desc">Enthält weitere Ordner oder Mod-Dateien.</p><div class="cardfoot"><span class="folder-open">Ordner öffnen →</span></div></article>';
   }).join('');
   const modCards=mods.map(m=>{
    const name=m.name.replace(/\.jar$/i,'');
    const size=Number.isFinite(m.size)?fmt(m.size)+' Bytes':'GitHub-Datei';
    const detailsUrl=typeof m.html_url==='string'&&m.html_url.startsWith('https://github.com/ichleon/Local-mods/blob/main/')?m.html_url:'#';
-   return '<article class="card"><div class="cardtop"><div class="icon iconfallback">▦</div><div><h3>'+esc(name)+'</h3><div class="downloads">Lokale Mod · '+esc(size)+'</div></div></div><p class="desc">Aus der öffentlichen MODBLOCK-Modsammlung. Die Datei wird direkt aus GitHub heruntergeladen.</p><div class="cardfoot"><a class="open" href="'+esc(detailsUrl)+'" target="_blank" rel="noopener">Details ↗</a><a class="download" href="'+esc(m.download_url)+'" download="'+esc(m.name)+'">Download ↓</a></div></div></article>';
+   return '<article class="card"><div class="cardtop"><div class="icon iconfallback">▦</div><div><h3>'+esc(name)+'</h3><div class="downloads">Lokale Mod · '+esc(size)+'</div></div></div><p class="desc">Aus der öffentlichen MODBLOCK-Modsammlung. Die Datei wird direkt aus GitHub heruntergeladen.</p><div class="cardfoot"><a class="open" href="'+esc(detailsUrl)+'" target="_blank" rel="noopener">Details ↗</a><a class="download" href="'+esc(m.download_url)+'" download="'+esc(m.name)+'">Download ↓</a></div></article>';
   }).join('');
   $('grid').innerHTML=folderCards+modCards;
-  $('grid').querySelectorAll('[data-folder]').forEach(button=>{
-   button.addEventListener('click',()=>loadLocalMods(button.dataset.folder));
+  $('grid').querySelectorAll('[data-folder]').forEach(card=>{
+   const openFolder=()=>loadLocalMods(card.dataset.folder);
+   card.addEventListener('click',openFolder);
+   card.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();openFolder();}
+   });
   });
   if(!folders.length&&!mods.length){
    $('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Dieser Ordner enthält keine .jar-Dateien oder Unterordner.</div>';
