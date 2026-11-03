@@ -59,6 +59,16 @@ select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .empty{padding:45px 20px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:16px}
 .pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:25px}
 .status{color:var(--muted);font-size:.9rem;min-height:1.4em;margin:10px 2px}
+.local-breadcrumb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 18px;color:var(--muted)}
+.local-breadcrumb[hidden]{display:none}
+.local-crumb{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:6px 10px;color:var(--text);font:inherit;font-size:.86rem;cursor:pointer}
+.local-crumb:hover,.local-crumb:focus-visible{background:#4b1b2e;border-color:var(--red);box-shadow:0 0 14px #ff496c25}
+.local-crumb.current{cursor:default;color:var(--muted);background:transparent}
+.local-separator{color:var(--muted)}
+.folder-card{width:100%;text-align:left;color:var(--text);font:inherit;cursor:pointer}
+.folder-card .folder-icon{display:grid;place-items:center;font-size:1.7rem;background:#1b2b47}
+.folder-card .folder-open{display:block;width:100%;text-align:center;border-radius:10px;padding:9px 8px;font-size:.88rem;font-weight:750;background:#10294a;color:#e6f4ff;border:1px solid #28517f}
+.folder-card:focus-visible{outline:2px solid var(--red);outline-offset:3px}
 .notice{font-size:.82rem;color:var(--muted);margin-top:18px}
 .spinner{display:inline-block;width:15px;height:15px;border:2px solid #294875;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:7px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -86,6 +96,7 @@ footer{border-top:1px solid #203a63;padding:24px;text-align:center;color:var(--m
 </div>
 <div class="meta"><span id="heading">Suchergebnisse</span><span id="count"></span></div>
 <div id="status" class="status" role="status"></div>
+<nav id="localBreadcrumb" class="local-breadcrumb" aria-label="Lokale Mod-Ordner" hidden></nav>
 <div id="grid" class="grid"></div>
 <div class="pagination"><button id="prev" class="btn secondary" disabled>← Zurück</button><span id="pageLabel">Seite 1</span><button id="next" class="btn secondary" disabled>Weiter →</button></div>
 <p class="notice">Die Moddaten kommen live von Modrinth. Der Download öffnet die passende Mod-Datei; lege die .jar-Datei anschließend in deinen Minecraft-Ordner <code>mods</code>. Prüfe vor dem Start, ob Loader und Spielversion passen.</p>
@@ -116,7 +127,7 @@ async function loadMinecraftVersions(){
  }
 }
 const $=id=>document.getElementById(id);
-let page=0, activeQuery='', total=0, busy=false, pageHits=0, totalKnown=true;
+let page=0, activeQuery='', total=0, busy=false, pageHits=0, totalKnown=true, localRequest=0;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const facets=()=>{const f=[['project_type:mod']];if($('version').value)f.push([`versions:${$('version').value}`]);if($('loader').value)f.push([`categories:${$('loader').value}`]);if($('environment').value){const env=$('environment').value;if(env==='client_only')f.push(['client_side:required']);else if(env==='server_only')f.push(['server_side:required']);else if(env==='client_and_server'){f.push(['client_side:required']);f.push(['server_side:required']);}}return JSON.stringify(f)};
 function fmt(n){if(!Number.isFinite(n))return '—';return new Intl.NumberFormat('de-DE',{notation:n>=1000?'compact':'standard',maximumFractionDigits:1}).format(n)}
@@ -135,6 +146,9 @@ function resetHome(){
  $('count').textContent='';
  $('heading').textContent='Suchergebnisse';
  $('status').textContent='';
+ localRequest++;
+ $('localBreadcrumb').hidden=true;
+ $('localBreadcrumb').innerHTML='';
  $('pageLabel').textContent='Seite 1';
  $('prev').disabled=true;$('next').disabled=true;
  window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
@@ -146,47 +160,72 @@ function runSearch(reset=true){
  $('results').classList.add('active');
  if(activeQuery.toLowerCase()==='local'){
   $('heading').textContent='Lokale Mods';
-  loadLocalMods();
+  loadLocalMods('');
   return;
  }
+ localRequest++;
+ $('localBreadcrumb').hidden=true;
+ $('localBreadcrumb').innerHTML='';
  $('heading').textContent=activeQuery?`Ergebnisse für „${activeQuery}“`:'Beliebte Mods';
  fetchResults();
 }
-async function loadLocalMods(){
+function renderLocalBreadcrumb(path){
+ const nav=$('localBreadcrumb');
+ const parts=path?path.split('/').filter(Boolean):[];
+ const crumbs=[{label:'Local',path:''}];
+ let current='';
+ for(const part of parts){
+  current=current?current+'/'+part:part;
+  crumbs.push({label:part,path:current});
+ }
+ nav.hidden=false;
+ nav.innerHTML=crumbs.map((crumb,index)=>{
+  if(index===crumbs.length-1)return '<span class="local-crumb current" aria-current="page">'+esc(crumb.label)+'</span>';
+  return '<button class="local-crumb" type="button" data-local-path="'+esc(crumb.path)+'">'+esc(crumb.label)+'</button>';
+ }).join('<span class="local-separator" aria-hidden="true">/</span>');
+ nav.querySelectorAll('[data-local-path]').forEach(button=>{
+  button.addEventListener('click',()=>loadLocalMods(button.dataset.localPath));
+ });
+}
+async function loadLocalMods(path=''){
+ const request=++localRequest;
  $('grid').innerHTML='';
  $('count').textContent='';
  $('pageLabel').textContent='Local';
  $('prev').disabled=true;$('next').disabled=true;
  $('status').innerHTML='<span class="spinner"></span>Lade lokale Modliste …';
+ renderLocalBreadcrumb(path);
  try{
   const api='https://api.github.com/repos/ichleon/Local-mods/contents';
-  const rootResponse=await fetch(api+'?ref=main');
-  if(!rootResponse.ok)throw new Error('GitHub-Repository konnte nicht gelesen werden (HTTP '+rootResponse.status+').');
-  const root=await rootResponse.json();
-  let entries=Array.isArray(root)?root:[];
-  // Unterstützt .jar-Dateien im Repository-Stamm sowie im optionalen Ordner local-mods/.
-  const folder=entries.find(item=>item.type==='dir'&&item.name.toLowerCase()==='local-mods');
-  if(folder){
-   const folderResponse=await fetch(api+'/local-mods?ref=main');
-   if(folderResponse.ok){
-    const nested=await folderResponse.json();
-    if(Array.isArray(nested))entries=entries.concat(nested);
-   }
-  }
-  const mods=entries.filter(item=>item.type==='file'&&item.name.toLowerCase().endsWith('.jar')&&item.download_url);
-  const unique=[...new Map(mods.map(m=>[m.path||m.name,m])).values()];
+  const encodedPath=path?'/'+path.split('/').map(segment=>encodeURIComponent(segment)).join('/'):'';
+  const response=await fetch(api+encodedPath+'?ref=main');
+  if(!response.ok)throw new Error('GitHub-Repository konnte nicht gelesen werden (HTTP '+response.status+').');
+  const entries=await response.json();
+  if(request!==localRequest)return;
+  if(!Array.isArray(entries))throw new Error('GitHub hat keine gültige Ordnerliste zurückgegeben.');
+  const folders=entries.filter(item=>item.type==='dir').sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  const mods=entries.filter(item=>item.type==='file'&&item.name.toLowerCase().endsWith('.jar')&&typeof item.download_url==='string'&&item.download_url.startsWith('https://raw.githubusercontent.com/ichleon/Local-mods/')).sort((a,b)=>a.name.localeCompare(b.name,'de'));
   $('status').textContent='';
-  $('count').textContent=unique.length+' lokale Mods';
-  if(!unique.length){
-   $('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Keine .jar-Dateien gefunden. Lege Moddateien in die Repository oder in den Ordner local-mods/ auf dem Branch main.</div>';
-   return;
-  }
-  $('grid').innerHTML=unique.map(m=>{
-   const name=m.name.replace(/\\.jar$/i,'');
-   const size=Number.isFinite(m.size)?fmt(m.size)+' Bytes':'GitHub-Datei';
-   return '<article class="card"><div class="cardtop"><div class="icon iconfallback">▦</div><div><h3>'+esc(name)+'</h3><div class="downloads">Lokale Mod · '+esc(size)+'</div></div></div><p class="desc">Aus der öffentlichen MODBLOCK-Modsammlung. Die Datei wird direkt aus GitHub heruntergeladen.</p><div class="cardfoot"><a class="open" href="'+esc(m.html_url||'#')+'" target="_blank" rel="noopener">Details ↗</a><a class="download" href="'+esc(m.download_url)+'" download="'+esc(m.name)+'">Download ↓</a></div></article>';
+  $('count').textContent=folders.length+' Ordner · '+mods.length+' lokale Mods';
+  const folderCards=folders.map(folder=>{
+   const folderPath=folder.path||(path?path+'/':'')+folder.name;
+   return '<button class="card folder-card" type="button" data-folder="'+esc(folderPath)+'" aria-label="Ordner '+esc(folder.name)+' öffnen"><div class="cardtop"><div class="icon folder-icon" aria-hidden="true">📁</div><div><h3>'+esc(folder.name)+'</h3><div class="downloads">Ordner · öffnen zum Anzeigen</div></div></div><p class="desc">Enthält weitere Ordner oder Mod-Dateien.</p><div class="cardfoot"><span class="folder-open">Ordner öffnen →</span></div></button>';
   }).join('');
+  const modCards=mods.map(m=>{
+   const name=m.name.replace(/\.jar$/i,'');
+   const size=Number.isFinite(m.size)?fmt(m.size)+' Bytes':'GitHub-Datei';
+   const detailsUrl=typeof m.html_url==='string'&&m.html_url.startsWith('https://github.com/ichleon/Local-mods/blob/main/')?m.html_url:'#';
+   return '<article class="card"><div class="cardtop"><div class="icon iconfallback">▦</div><div><h3>'+esc(name)+'</h3><div class="downloads">Lokale Mod · '+esc(size)+'</div></div></div><p class="desc">Aus der öffentlichen MODBLOCK-Modsammlung. Die Datei wird direkt aus GitHub heruntergeladen.</p><div class="cardfoot"><a class="open" href="'+esc(detailsUrl)+'" target="_blank" rel="noopener">Details ↗</a><a class="download" href="'+esc(m.download_url)+'" download="'+esc(m.name)+'">Download ↓</a></div></div></article>';
+  }).join('');
+  $('grid').innerHTML=folderCards+modCards;
+  $('grid').querySelectorAll('[data-folder]').forEach(button=>{
+   button.addEventListener('click',()=>loadLocalMods(button.dataset.folder));
+  });
+  if(!folders.length&&!mods.length){
+   $('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Dieser Ordner enthält keine .jar-Dateien oder Unterordner.</div>';
+  }
  }catch(error){
+  if(request!==localRequest)return;
   $('status').textContent='';
   $('grid').innerHTML='<div class="empty" style="grid-column:1/-1"><strong>Lokale Mods konnten nicht geladen werden.</strong><br>'+esc(error.message)+'<br><br>Prüfe, ob die Repository öffentlich ist und der Branch main existiert.</div>';
  }
