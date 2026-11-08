@@ -112,10 +112,10 @@ async function loadMinecraftVersions(){
   const response=await fetch(`${API}/tag/game_version`);
   if(!response.ok)throw new Error('Minecraft-Versionen konnten nicht geladen werden');
   const versions=await response.json();
-  const compareVersions=(a,b)=>{const aa=String(a).match(/\\d+/g)?.map(Number)||[];const bb=String(b).match(/\\d+/g)?.map(Number)||[];for(let i=0;i<Math.max(aa.length,bb.length);i++){const diff=(aa[i]||0)-(bb[i]||0);if(diff)return diff;}return 0;};
-  const minimum=[1,20];
-  const eligible=versions.filter(v=>v.version_type==='release'&&compareVersions(v.version,'1.20')>=0);
-  eligible.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const compareVersions=(a,b)=>{const aa=String(a).match(/\d+/g)?.map(Number)||[];const bb=String(b).match(/\d+/g)?.map(Number)||[];for(let i=0;i<Math.max(aa.length,bb.length);i++){const diff=(aa[i]||0)-(bb[i]||0);if(diff)return diff;}return 0;};
+  const minimumVersion='1.20';
+  const eligible=versions.filter(v=>v.version_type==='release'&&compareVersions(v.version,minimumVersion)>=0);
+  eligible.sort((a,b)=>compareVersions(b.version,a.version)||new Date(b.date)-new Date(a.date));
   const current=select.value;
   select.replaceChildren(new Option('Alle Versionen',''));
   for(const v of eligible)select.add(new Option(v.version,v.version));
